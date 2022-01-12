@@ -1,11 +1,6 @@
-*Note: This is a dummy README for the package you want to build. For a README for the package builder, check out
-[PACKAGE_CREATION_README.md](https://github.com/benmaier/parmscan/blob/main/PACKAGE_CREATION_README.md)*
+# parmscan
 
-![logo](https://github.com/benmaier/parmscan/raw/main/img/Fig1.png)
-
-[![CircleCI](https://circleci.com/gh/benmaier/parmscan.svg?style=svg)](https://circleci.com/gh/benmaier/parmscan)
-
-Description of this package goes here.
+Provide tools to plot parameter scan results that are wrapped up in a high-dimensional numpy array
 
 * repository: https://github.com/benmaier/parmscan/
 * documentation: http://parmscan.benmaier.org/

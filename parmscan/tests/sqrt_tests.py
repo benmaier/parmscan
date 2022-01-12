@@ -2,16 +2,16 @@ import unittest
 
 import numpy as np
 
-from parmscan.sqrt import get_sqrt_2
-
-class SqrtTest(unittest.TestCase):
-
-    def test_sqrt(self):
-
-        a = get_sqrt_2()
-        b = np.sqrt(2)
-
-        assert(np.isclose(a,b))
+#from parmscan.sqrt import get_sqrt_2
+#
+#class SqrtTest(unittest.TestCase):
+#
+#    def test_sqrt(self):
+#
+#        a = get_sqrt_2()
+#        b = np.sqrt(2)
+#
+#        assert(np.isclose(a,b))
 
 if __name__ == "__main__":
 
