@@ -16,7 +16,7 @@ setup(
     description="Provide tools to plot parameter scan results that are wrapped up in a high-dimensional numpy array",
     long_description='',
     packages=setuptools.find_packages(),
-    python_requires='>=3.6',
+    python_requires='>=3.7',
     install_requires=[
                 'numpy>=1.17',
                 'matplotlib>=3.0.0',
@@ -25,7 +25,6 @@ setup(
     tests_require=['pytest', 'pytest-cov'],
     setup_requires=['pytest-runner'],
     classifiers=['License :: OSI Approved :: MIT License',
-                 'Programming Language :: Python :: 3.6',
                  'Programming Language :: Python :: 3.7',
                  'Programming Language :: Python :: 3.8',
                  ],
