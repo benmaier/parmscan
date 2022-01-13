@@ -1,5 +1,6 @@
 import bfmplot as bp
 from bfmplot import pl
+import colorsys
 
 def update_min_max(minmax,vals):
     """Find new data ranges with updated data"""
@@ -33,7 +34,7 @@ def get_linestyle_iterator(what_to_iterate,existing_styles=None,linestyles=None)
         existing_styles = [ {} for _ in what_to_iterate]
     if linestyles is None:
         linestyles = ['-','-.','--',':']
-    linestyles = bp.simple_cycler(linesstyles)
+    linestyles = bp.simple_cycler(linestyles)
     for i, _ in enumerate(what_to_iterate):
         existing_styles[i]['ls'] = linestyles[i]
     return existing_styles
@@ -61,3 +62,9 @@ def get_marker_iterator(what_to_iterate,existing_styles=None,markers=None):
     return existing_styles
 
 
+def make_lighter(rgb, scale_l):
+    # convert rgb to hls
+    h, l, s = colorsys.rgb_to_hls(*rgb)
+    dl = 1-l
+    # manipulate h, l, s values and return as rgb
+    return colorsys.hls_to_rgb(h, min(1, l + dl * scale_l), s = s)

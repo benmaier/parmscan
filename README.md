@@ -5,19 +5,12 @@ Provide tools to plot parameter scan results that are wrapped up in a high-dimen
 * repository: https://github.com/benmaier/parmscan/
 * documentation: http://parmscan.benmaier.org/
 
-```python
-from parmscan.sqrt import get_sqrt_2
-
-print(get_sqrt_2())
-```
-
 ## Install
 
     pip install parmscan
 
 `parmscan` was developed and tested for 
 
-* Python 3.6
 * Python 3.7
 * Python 3.8
 
