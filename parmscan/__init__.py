@@ -19,6 +19,12 @@ from .tools import (
         get_linestyle_iterator,
         get_linewidth_iterator,
         get_marker_iterator,
+        add_colors,
+        add_linestyles,
+        add_linewidths,
+        add_markers,
+        make_lighter,
+        update_min_max,
     )
 
 from .parameter_plotter import ScanPlotter
