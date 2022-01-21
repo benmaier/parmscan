@@ -1,3 +1,5 @@
+![logo](https://github.com/benmaier/parmscan/raw/main/img/Fig1.png)
+
 # parmscan
 
 Provide tools to plot parameter scan results that are wrapped up in a high-dimensional numpy array
