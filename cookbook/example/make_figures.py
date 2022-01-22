@@ -32,7 +32,8 @@ if __name__ == "__main__":
     figs, axs, datas = S.make_comparison_figures(
                 what_to_iterate_on_figures=S.prod(['frequency', 'amplitude']),
                 what_to_iterate_on_rows=S.get('observable'),
-                what_to_iterate_on_columns=psc.add_markers(S.get('phase')),
+                #what_to_iterate_on_columns=psc.add_markers(S.get('phase')),
+                what_to_iterate_on_columns=S.get('phase'),
                 what_to_iterate_on_axis=S.dprod(
                                                     psc.add_colors(S.get('y0')),
                                                     psc.add_linestyles(S.get('decay',[0,2])),
@@ -44,6 +45,8 @@ if __name__ == "__main__":
                 get_col_label=get_col_label,
                 construct_data_structure=True,
                 #actually_plot_on_figures=False,
+                sharey='row',
+                sharex='all',
             )
 
     from bfmplot import pl
@@ -71,6 +74,6 @@ if __name__ == "__main__":
                 x_label="momentum",
                 get_col_label=get_col_label,
                 construct_data_structure=True,
-                #actually_plot_on_figures=False,
+                actually_plot_on_figures=False,
             )
     pl.show()

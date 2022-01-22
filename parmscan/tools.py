@@ -93,6 +93,17 @@ def rgb_to_hex(rgb):
     _hex = '#%02x%02x%02x' % (int(r*255), int(g*255), int(b*255))
     return _hex
 
+def hex_to_rgb(_hex):
+    rgb = mpl.colors.ColorConverter.to_rgb(_hex)
+    return rgb
+
+def hex_to_rgb_css(_hex,alpha=1.):
+    rgb = hex_to_rgb(_hex)
+    r, g, b = rgb
+    rgba = 'rgba(%d,%d,%d,%4.2f)' % (int(r*255), int(g*255), int(b*255), alpha)
+    return rgba
+
+
 def make_lighter(rgb, scale_l):
     # convert rgb to hls
     h, l, s = colorsys.rgb_to_hls(*rgb)
@@ -105,3 +116,64 @@ def make_lighter(rgb, scale_l):
                     s=s,
                 )
             )
+
+def get_default_label(parmset):
+    """Create a default label from a parameterset"""
+    lbls = []
+    for k, v in parmset.items():
+        if isinstance(v['val'], (int, np.uint, float,np.float, np.int)):
+            val = human_format(v['val'],precision=2)
+        else:
+            val = v['val']
+        lbls.append("{} = {}".format(k,val))
+    return "\n".join(lbls)
+
+def human_format(num, precision=2):
+    """Return numbers rounded to given precision and with sensuous suffixes.
+
+    Parameters
+    ==========
+    num : float
+        The number to humanify.
+    precision : int, default : 2
+        Number of decimal places.
+
+    Return
+    ======
+    s : String
+        Human readable string.
+    """
+    if np.isclose(num, 0):
+        return "0"
+    if abs(num) > 1:
+        suffixes=['', 'k', 'M', 'G', 'T', 'P']
+        m = sum([abs(num/1000.0**x) >= 1 for x in range(1, len(suffixes))])
+        s = "%.{}f".format(precision) % (num/1000.0**m)
+    elif abs(num) < 1:
+        suffixes=['', 'm', 'μ', 'n', 'p', 'f']
+        m = sum([abs(num*1000.0**x) <= 1 for x in range(1, len(suffixes))])
+        s = "%.{}f".format(precision) % (num*1000.0**m)
+    else:
+        return "-1" if num == -1 else "1"
+
+    while s[-1] == '0':
+        s = s[:-1]
+    if s[-1] == '.':
+        s = s[:-1]
+
+    return s + suffixes[m]
+
+
+
+if __name__=="__main__":
+    for num in [
+                13e9,
+                1.23234523652346346e4,
+                4.5e-10,
+                1e-3,
+                1.,
+                0.1,
+                np.float(0.000040000000000001),
+            ]:
+        print(num, human_format(num))
+

@@ -9,17 +9,24 @@ from itertools import product
 from parmscan.tools import (
         update_min_max,
         make_lighter,
+        get_default_label,
+        rgb_to_hex,
     )
 
 
 import warnings
+
+from parmscan.render_plotly import (
+        render_figure_as_plotly,
+        render_figures_as_plotly,
+    )
 
 
 class ScanPlotter():
 
     def __init__(self,data,
                       parameter_pairs,
-                      pairs_of_data_representing_error_bounds_from_highest_to_lowest=[],
+                      pairs_of_bounds_from_smallest_to_largest=[],
                       warnings=True,
                 ):
 
@@ -28,7 +35,7 @@ class ScanPlotter():
         self.param_names = list(map(lambda x: x[0], self.params))
         self.param_values = list(map(lambda x: list(x[1]), self.params))
         self.param_indices = list(map(lambda x: list(range(len(x[1]))), self.params))
-        self.data_bounds = pairs_of_data_representing_error_bounds_from_highest_to_lowest
+        self.data_bounds = pairs_of_bounds_from_smallest_to_largest
         self.warnings = warnings
 
 
@@ -45,9 +52,10 @@ class ScanPlotter():
 
     def get(self,param_name,indices=None):
         values = self.get_parameter_values(param_name)
+        _indices = list(range(len(values)))
         if indices is None:
-            indices = list(range(len(values)))
-        these_params = [ { param_name: {'val':v, 'ind': i}} for i, v in enumerate(values) if i in indices]
+            indices = _indices
+        these_params = [ { param_name: {'val':values[i], 'ind': _indices[i]}} for i in indices ]
         return these_params
 
     def get_reversed(self,param_name,indices=None):
@@ -83,7 +91,7 @@ class ScanPlotter():
                 raise ValueError(f"Not enough parameters provided to get curve, you didn't supply {missing}")
             else:
                 if self.warnings:
-                    warnings.warn(f"You passed parameters that are not in yout parameter list: {too_many}")
+                    warnings.warn(f"You passed parameters that are not in your parameter list: {too_many}")
 
         ndcs = []
         for name in self.param_names:
@@ -119,6 +127,21 @@ class ScanPlotter():
                 v['ind'] = self.get_parameter_value_index(k,v['val'])
 
 
+    def make_comparison_figures_plotly(self,
+                                    *args,
+                                    **kwargs,
+                                    ):
+        kwargs['actually_plot_on_figures'] = False
+        kwargs['construct_data_structure'] = True
+        figs, axs, datas = self.make_comparison_figures(*args,**kwargs)
+        return render_figures_as_plotly(datas)
+
+    def make_comparison_figure_plotly(self,*args,**kwargs):
+        kwargs['actually_plot_on_figures'] = False
+        kwargs['construct_data_structure'] = True
+        fig, ax, data = self.make_comparison_figure(self,*args,**kwargs)
+        return render_figure_as_plotly(data)
+
     def make_comparison_figures(self,
                                 what_to_iterate_on_figures,
                                 get_fig_title=None,
@@ -147,14 +170,21 @@ class ScanPlotter():
             what_to_keep_constant.update(fig_it)
             kwargs['what_to_keep_constant'] = what_to_keep_constant
             fig, ax, data = self.make_comparison_figure(*args,**kwargs)
+
             if get_fig_title is not None:
                 lbl = get_fig_title(fig_it)
-                if actually_plot_on_figures:
-                    fig.suptitle(lbl)
-                data['label'] = lbl
+            else:
+                lbl = get_default_label(fig_it)
+
+            if actually_plot_on_figures:
+                fig.suptitle(lbl)
+
+            data['title'] = lbl
+
             if get_fig_caption is not None:
                 cap = get_fig_caption(fig_it)
                 data['caption'] = cap
+
             if actually_plot_on_figures:
                 fig.tight_layout()
             figs.append(fig)
@@ -191,9 +221,11 @@ class ScanPlotter():
                                get_y_label=None,
                                x_label=None,
                                get_col_label=None,
+                               get_curve_label=None,
                                plot_bounds=False, # can be True, False, 'fill_between', or 'errorbar'; 'True' defaults to 'fill_between'
                                plot_bounds_only=False,
-                               additional_fill_between_kwargs={},
+                               additional_fill_between_kwargs={'alpha':0.35},
+                               make_bound_color_lighter=True,
                                additional_errorbar_kwargs={},
                                construct_data_structure=False,
                                actually_plot_on_figures=True,
@@ -287,12 +319,46 @@ class ScanPlotter():
         else:
             assert(ax.shape == (nR, nC))
 
+        if x_label is None:
+            x_label = x_parameter
+        if x_label is None or x_label.upper() == 'NONE':
+            x_label = None
+
+        if sharex == True:
+            sharex = 'all'
+        if sharey == True:
+            sharey = 'all'
+
+        # construct references to limits
+        # according to the rules of axis sharing
+        shares = [sharex,sharey]
+        all_minmax = [None,None]
+        for ish, share in enumerate(shares):
+            if share == 'all':
+                # all entries in all_minmax refer to the same minmax
+                all_minmax[ish] =  [ [[None,None]] * nC ] * nR
+            elif share == 'none':
+                # all entries in all_minmax refer to a unique minmax
+                all_minmax[ish] = [ [[None,None] for _ in range(nC)]\
+                                    for __ in range(nR) ]
+            elif share == 'col':
+                # entries in all_minmax refer to a unique minmax for each column
+                all_minmax[ish] = [ [[None,None] for _ in range(nC)] ] * nR
+            elif share == 'row':
+                # entries in all_minmax refer to a unique minmax for each column
+                all_minmax[ish] = [ [[None,None]] * nC for _ in range(nR) ]
+
         figure = {
                     'ncols': nC,
                     'nrows': nR,
                     'colwidth': colwidth,
+                    'sharex':sharex,
+                    'sharey':sharey,
                     'rowheight': rowheight,
                     'panels': [ [ None for col in range(nC) ] for row in range(nR)  ],
+                    'column_titles': [],
+                    'x_label': x_label,
+                    'y_labels': [],
                  }
 
         for irow, row in enumerate(what_to_iterate_on_rows):
@@ -300,8 +366,8 @@ class ScanPlotter():
                 these_parameters = deepcopy(row)
                 these_parameters.update(deepcopy(col))
 
-                xminmax = [None,None]
-                yminmax = [None,None]
+                xminmax = all_minmax[0][irow][icol]
+                yminmax = all_minmax[1][irow][icol]
 
                 if construct_data_structure:
                     curves = []
@@ -343,9 +409,14 @@ class ScanPlotter():
 
                             plot_kwargs.update(this_voi)
 
+                    if get_curve_label:
+                        curve_label = get_curve_label(these_curve_parameters)
+                    else:
+                        curve_label = get_default_label(curve)
+
                     if not plot_bounds_only:
                         if actually_plot_on_figures:
-                            plot_handle, = ax[irow, icol].plot(x,y,**plot_kwargs)
+                            plot_handle, = ax[irow, icol].plot(x,y,label=curve_label,**plot_kwargs)
                         if construct_data_structure:
                             if 'color' not in plot_kwargs:
                                 prop_cycle = mpl.rcParams['axes.prop_cycle']
@@ -355,6 +426,7 @@ class ScanPlotter():
                             this_curve = {'x':x,
                                           'y':y,
                                           'plot_args':plot_kwargs,
+                                          'label':curve_label,
                                           'curve_parameters':these_curve_parameters,
                                           }
                             curves.append(this_curve)
@@ -363,11 +435,11 @@ class ScanPlotter():
 
                     if plot_bounds:
 
-                        if plot_handle is not None:
+                        if actually_plot_on_figures and plot_handle is not None:
                             color = plot_handle.get_color()
                         else:
                             if 'color' in plot_kwargs:
-                                color = plot_kwargs
+                                color = plot_kwargs['color']
                             else:
                                 prop_cycle = mpl.rcParams['axes.prop_cycle']
                                 colors = prop_cycle.by_key()['color']
@@ -377,19 +449,29 @@ class ScanPlotter():
                         rgb = mpl.colors.ColorConverter.to_rgb(color)
                         these_bounds = []
                         for i in range(Nbounds-1,-1,-1):
-                            betw_color = make_lighter(rgb,((i+1+1)/(Nbounds+2)))
-                            errbar_color = make_lighter(rgb,((i+1)/(Nbounds+2)))
+                            if make_bound_color_lighter:
+                                betw_color = make_lighter(rgb,((i+1+1)/(Nbounds+2)))
+                                errbar_color = make_lighter(rgb,((i+1)/(Nbounds+2)))
+                                fill_between_kwargs.update({'alpha':1})
+                            else:
+                                betw_color = rgb_to_hex(rgb)
+                                errbar_color = rgb_to_hex(rgb)
 
                             upper = self.get_upper_bound(i,these_curve_parameters,x_parameter)
                             lower = self.get_lower_bound(i,these_curve_parameters,x_parameter)
+                            yminmax = update_min_max(yminmax,upper)
+                            yminmax = update_min_max(yminmax,lower)
 
                             if plot_bounds == 'fill_between':
                                 if actually_plot_on_figures:
-                                    ax[irow, icol].fill_between(x,lower,upper,color=betw_color,**fill_between_kwargs)
+                                    ax[irow, icol].fill_between(x,lower,upper,
+                                                                color=betw_color,
+                                                                **fill_between_kwargs,
+                                                               )
                                 if construct_data_structure:
                                     _plot_kwargs = deepcopy(fill_between_kwargs)
                                     _plot_kwargs['color'] = betw_color
-                                    bounds.append({
+                                    these_bounds.append({
                                             'lower': lower,
                                             'upper': upper,
                                             'kind': 'fill_between',
@@ -397,11 +479,15 @@ class ScanPlotter():
                                         })
                             elif plot_bounds == 'errorbar':
                                 if actually_plot_on_figures:
-                                    ax[irow, icol].errorbar(x,y,yerr=np.array([y-lower,upper-y]),color=errbar_color,**errorbar_kwargs)
+                                    ax[irow, icol].errorbar(x,y,
+                                                            yerr=np.array([y-lower,upper-y]),
+                                                            color=errbar_color,
+                                                            **errorbar_kwargs,
+                                                            )
                                 if construct_data_structure:
                                     _plot_kwargs = deepcopy(fill_between_kwargs)
-                                    _plot_kwargs['color'] = arrbar_color
-                                    bounds.append({
+                                    _plot_kwargs['color'] = errbar_color
+                                    these_bounds.append({
                                             'lower': lower,
                                             'upper': upper,
                                             'kind': 'errorbars',
@@ -409,23 +495,21 @@ class ScanPlotter():
                                             'plot_args': _plot_kwargs,
                                         })
 
-                            if construct_data_structure:
-                                these_bounds.append(bounds)
                         bounds.append(these_bounds)
                 if construct_data_structure:
                     figure['panels'][irow][icol] = {'curves':curves,'bounds':bounds}
 
 
+                this_xlim = list(xlim)
+                this_ylim = list(ylim)
+
+                for i in range(2):
+                    if this_xlim[i] is None:
+                        this_xlim[i] = xminmax[i]
+                    if this_ylim[i] is None:
+                        this_ylim[i] = yminmax[i]
+
                 if actually_plot_on_figures:
-                    this_xlim = list(xlim)
-                    this_ylim = list(ylim)
-
-                    for i in range(2):
-                        if this_xlim[i] is None:
-                            this_xlim[i] = xminmax[i]
-                        if this_ylim[i] is None:
-                            this_ylim[i] = yminmax[i]
-
                     if automatically_adjust_xlim:
                         ax[irow,icol].set_xlim(this_xlim)
                     if automatically_adjust_ylim:
@@ -434,20 +518,30 @@ class ScanPlotter():
                     if nice_ticks is not None:
                         bp.nice_ticks(ax[irow, icol],nice_ticks)
 
-                    if irow == nR-1:
-                        if x_label is None:
-                            x_label = x_parameter
-                        if x_label.upper() != 'NONE':
+                if irow == nR-1:
+                    if x_label is None:
+                        x_label = x_parameter
+                    if x_label.upper() != 'NONE':
+                        if actually_plot_on_figures:
                             ax[irow,icol].set_xlabel(x_label)
 
-                    if irow == 0:
-                        if get_col_label is not None:
-                            col_label = get_col_label(col)
-                            ax[0,icol].set_title(col_label,fontsize='medium',loc='right')
+                if irow == 0:
+                    if get_col_label is not None:
+                        col_label = get_col_label(col)
+                    else:
+                        col_label = get_default_label(col)
+                    if actually_plot_on_figures:
+                        ax[0,icol].set_title(col_label,fontsize='medium',loc='right')
+                    figure['column_titles'].append(col_label)
 
-            if get_y_label is not None and actually_plot_on_figures:
+            if get_y_label is not None:
                 ylabel = get_y_label(row)
+            else:
+                ylabel = get_default_label(row)
+            if actually_plot_on_figures:
                 ax[irow,0].set_ylabel(ylabel)
+            if construct_data_structure:
+                figure['y_labels'].append(ylabel)
 
         if actually_plot_on_figures:
             for a in ax.flatten():
@@ -456,15 +550,19 @@ class ScanPlotter():
                 if format_x is not None:
                     format_x(a)
 
+        if construct_data_structure:
+            for irow, row in enumerate(what_to_iterate_on_rows):
+                for icol, col in enumerate(what_to_iterate_on_columns):
+                    figure['panels'][irow][icol]['data_bounds'] = {
+                                'x': all_minmax[0][irow][icol],
+                                'y': all_minmax[1][irow][icol],
+                            }
+
         return fig, ax, figure
 
-    def parameter_product(self,parameter_names,value_or_index='ind',reverse=False):
+    def parameter_product(self,parameter_names,reverse=False):
         """Shortcut to get a subspace of the whole parameter product space"""
 
-        if isinstance(value_or_index, str):
-            value_or_index = [ value_or_index for name in parameter_names ]
-
-        assert(len(parameter_names) == len(value_or_index))
         if isinstance(reverse,bool):
             reverse = [ reverse for _ in range(len(parameter_names)) ]
 
@@ -478,11 +576,11 @@ class ScanPlotter():
         this_product = []
         for ndx in product(*these_param_indices):
             this_entry = {}
-            for name, i, voi in zip(parameter_names, ndx, value_or_index):
-                if voi.startswith('i'):
-                    this_entry[name] = {'ind':i}
-                elif voi.startswith('v'):
-                    this_entry[name] = {'val':self.get_parameter_values(name)[i]}
+            for name, i in zip(parameter_names, ndx):
+                    this_entry[name] = {
+                        'ind':i,
+                        'val':self.get_parameter_values(name)[i],
+                    }
 
             this_product.append(this_entry)
 
@@ -527,54 +625,3 @@ class ScanPlotter():
     def dprod(self,*args,**kwargs):
         """Short for ``self.parameter_dict_product``"""
         return self.parameter_dict_product(*args,**kwargs)
-
-
-
-if __name__ == "__main__":
-    from rich import print
-
-    what_to_iterate_on_columns = get_parameter_value_product('infectious_period', 'omicron_latent_period')
-    what_to_iterate_on_rows = [
-                { 'observable': {'val':('incidence','C','total') }, },
-                { 'observable': {'val':('incidence','H','total') }, },
-                { 'observable': {'val':('prevalence','U','total') }, },
-            ]
-
-    what_to_iterate_on_axis = [
-                { 'omicron_base_probability_scaling': { 'ind': i} } for i in range(10)
-            ]
-
-    for iaxit in range(len(what_to_iterate_on_axis)):
-        axit = what_to_iterate_on_axis[iaxit]
-        axit['relative_additional_time_modulation_pairs'] = {'ind': 0}
-        axit = deepcopy(axit)
-        axit['relative_additional_time_modulation_pairs'] = {'ind': 1}
-        what_to_iterate_on_axis.append(axit)
-
-    what_to_keep_constant = {
-                    'booster_scenario': {'val':'medium_rate_medium_reach_inf2FromDataInfBFromSymp_escape'},
-                }
-
-    dates = _dts(np.arange(129)+tomic)
-
-    styles_to_iterate_on_columns = get_color_iterator(what_to_iterate_on_columns)
-    styles_to_iterate_on_axis = [{'ls':['-','--'][int(np.round(i/len(what_to_iterate_on_axis)))]} for i in range(len(what_to_iterate_on_axis))]
-
-    fig, ax = make_comparison_figure(
-                           what_to_iterate_on_columns,
-                           what_to_iterate_on_rows,
-                           what_to_iterate_on_axis,
-                           what_to_keep_constant=what_to_keep_constant,
-                           x=dates,
-                           format_dates=format_dates,
-                           nice_ticks='y',
-                           sharey='row',
-                           styles_to_iterate_on_columns=styles_to_iterate_on_columns,
-                           styles_to_iterate_on_axis=styles_to_iterate_on_axis,
-                           )
-    fig.tight_layout()
-
-    pl.show()
-
-
-
