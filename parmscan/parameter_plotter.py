@@ -106,6 +106,23 @@ class ScanPlotter():
 
         return tuple(ndcs)
 
+    def get_subspace_of_data(self,parameters):
+        missing = set(self.param_names) - set(list(parameters.keys()))
+
+        ndcs = []
+        for name in self.param_names:
+            if name in missing:
+                ndcs.append(slice(None))
+            else:
+                if 'ind' in parameters[name]:
+                    ndcs.append(parameters[name]['ind'])
+                else:
+                    ndx = self.get_parameter_value_index(name, parameters[name]['val'])
+                    ndcs.append(ndx)
+
+        return self.data[tuple(ndcs)]
+
+
     def get_curve(self,parameters,xname):
         return self.data[self.get_curve_ndcs(parameters,xname)]
 
@@ -139,7 +156,8 @@ class ScanPlotter():
     def make_comparison_figure_plotly(self,*args,**kwargs):
         kwargs['actually_plot_on_figures'] = False
         kwargs['construct_data_structure'] = True
-        fig, ax, data = self.make_comparison_figure(self,*args,**kwargs)
+        print(args, kwargs)
+        fig, ax, data = self.make_comparison_figure(*args,**kwargs)
         return render_figure_as_plotly(data)
 
     def make_comparison_figures(self,
@@ -177,7 +195,7 @@ class ScanPlotter():
                 lbl = get_default_label(fig_it)
 
             if actually_plot_on_figures:
-                fig.suptitle(lbl)
+                fig.suptitle(lbl,x=0.03,ha='left')
 
             data['title'] = lbl
 
@@ -321,8 +339,8 @@ class ScanPlotter():
 
         if x_label is None:
             x_label = x_parameter
-        if x_label is None or x_label.upper() == 'NONE':
-            x_label = None
+        if x_label is None or x_label is False or x_label.upper() == 'NONE':
+            x_label = False
 
         if sharex == True:
             sharex = 'all'
@@ -359,6 +377,7 @@ class ScanPlotter():
                     'column_titles': [],
                     'x_label': x_label,
                     'y_labels': [],
+                    'title':None,
                  }
 
         for irow, row in enumerate(what_to_iterate_on_rows):
@@ -521,27 +540,34 @@ class ScanPlotter():
                 if irow == nR-1:
                     if x_label is None:
                         x_label = x_parameter
-                    if x_label.upper() != 'NONE':
+                    if x_label is not False or ( isinstance(x_label, str) and x_label.upper() != 'NONE'):
                         if actually_plot_on_figures:
                             ax[irow,icol].set_xlabel(x_label)
 
                 if irow == 0:
-                    if get_col_label is not None:
+                    if get_col_label is not None and get_col_label is not False:
                         col_label = get_col_label(col)
+                    elif get_col_label is False:
+                        col_label = None
                     else:
                         col_label = get_default_label(col)
-                    if actually_plot_on_figures:
-                        ax[0,icol].set_title(col_label,fontsize='medium',loc='right')
-                    figure['column_titles'].append(col_label)
+                    if col_label is not None:
+                        if actually_plot_on_figures:
+                            ax[0,icol].set_title(col_label,fontsize='medium',loc='right')
+                        figure['column_titles'].append(col_label)
 
-            if get_y_label is not None:
+            if get_y_label is not None and get_y_label is not False:
                 ylabel = get_y_label(row)
+            elif get_y_label is False:
+                ylabel = None
             else:
                 ylabel = get_default_label(row)
-            if actually_plot_on_figures:
-                ax[irow,0].set_ylabel(ylabel)
-            if construct_data_structure:
-                figure['y_labels'].append(ylabel)
+
+            if ylabel is not None:
+                if actually_plot_on_figures:
+                    ax[irow,0].set_ylabel(ylabel)
+                if construct_data_structure:
+                    figure['y_labels'].append(ylabel)
 
         if actually_plot_on_figures:
             for a in ax.flatten():

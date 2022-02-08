@@ -70,7 +70,7 @@ def _convert_plot_kwargs(kwargs):
         marker_args['marker_size'] = kwargs['ms']
 
     if 'lw' in kwargs:
-        line_args['line_width'] = kwargs['lw']
+        line_args['width'] = kwargs['lw']
 
     if 'color' in kwargs:
         marker_args['color'] = kwargs['color']
@@ -84,7 +84,10 @@ def _convert_plot_kwargs(kwargs):
 
 
 def _lbl(s):
-    return s.replace('\n',', ')
+    if isinstance(s,str):
+        return s.replace('\n',', ')
+    else:
+        return s
 
 
 def render_figure_as_plotly(figure,figure_layout=None):

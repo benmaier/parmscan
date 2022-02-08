@@ -38,7 +38,7 @@ def add_style(what_to_iterate,style_iterator):
 
 
 def add_colors(what_to_iterate,colors=None):
-    styles = get_color_iterator(what_to_iterate,colors)
+    styles = get_color_iterator(what_to_iterate,colors=colors)
     return add_style(what_to_iterate, styles)
 
 
@@ -53,8 +53,8 @@ def get_linestyle_iterator(what_to_iterate,existing_styles=None,linestyles=None)
         existing_styles[i]['ls'] = linestyles[i]
     return existing_styles
 
-def add_linestyles(what_to_iterate,colors=None):
-    styles = get_linestyle_iterator(what_to_iterate,colors)
+def add_linestyles(what_to_iterate,linestyles=None):
+    styles = get_linestyle_iterator(what_to_iterate,linestyles=linestyles)
     return add_style(what_to_iterate, styles)
 
 
@@ -66,11 +66,11 @@ def get_linewidth_iterator(what_to_iterate,existing_styles=None,linewidths=None)
         linewidths = [1.5,1.0,0.5]
     linewidths = bp.simple_cycler(linewidths)
     for i, _ in enumerate(what_to_iterate):
-        existing_styles[i]['ls'] = linestyles[i]
+        existing_styles[i]['ls'] = linewidths[i]
     return existing_styles
 
-def add_linewidths(what_to_iterate,colors=None):
-    styles = get_linewidth_iterator(what_to_iterate,colors)
+def add_linewidths(what_to_iterate,linewidths=None):
+    styles = get_linewidth_iterator(what_to_iterate,linewidths=linewidths)
     return add_style(what_to_iterate, styles)
 
 def get_marker_iterator(what_to_iterate,existing_styles=None,markers=None):

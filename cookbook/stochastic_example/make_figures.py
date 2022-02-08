@@ -46,12 +46,12 @@ if __name__ == "__main__":
                 #what_to_iterate_on_columns=psc.add_markers(S.get('phase')),
                 what_to_iterate_on_columns=S.get('phase'),
                 what_to_iterate_on_axis=\
-                                            #S.dprod(
+                                            S.dprod(
                                                     psc.add_colors(S.get('y0',[0,3])),
-                                                    #psc.add_linestyles(S.get('decay',[0,2])),
-                                               #),
+                                                    psc.add_linestyles(S.get('decay',[0,2])),
+                                               ),
                 x_parameter='time',
-                what_to_keep_constant={'decay':{'ind':0}},
+                #what_to_keep_constant={'decay':{'ind':0}},
                 nice_ticks='xy',
                 #get_fig_title=get_figure_title,
                 #get_fig_caption=get_figure_caption,
@@ -72,5 +72,9 @@ if __name__ == "__main__":
 
     with open('figures.json','wb') as f:
         f.write(orjson.dumps(datas,option=orjson.OPT_SERIALIZE_NUMPY))
+
+    #import plotly.tools as tls
+    #plotly_fig = tls.mpl_to_plotly(figs[0])
+    #plotly_fig.show()
 
     pl.show()
